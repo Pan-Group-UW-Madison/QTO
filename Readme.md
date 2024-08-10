@@ -2,8 +2,8 @@
 
  __Five Material Cantilever__
 
-![](Gallery/FiveMaterialCantilever.gif)
+<img src="Gallery/FiveMaterialCantilever.gif" width="300" height="200"/>
 
  __Five Material Inverter__
 
-![](Gallery/FiveMaterialInverter.gif)
+<img src="Gallery/FiveMaterialInverter.gif" width="300" height="300"/>
