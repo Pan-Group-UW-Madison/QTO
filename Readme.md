@@ -1,10 +1,8 @@
  # Gallery
 
  __Five Material Cantilever__
- 
- <p align="center">
-    <video loop src="Gallery/FiveMaterialCantilever.mp4"> </video>
- </p>
+
+![](Gallery/FiveMaterialCantilever.gif)
 
  __Five Material Inverter__
  
