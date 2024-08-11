@@ -1,4 +1,8 @@
- # Gallery
+# Quantum Accelerated Topology Optimization
+
+Reference: [Ye, Zisheng and Pan, Wenxiao, Discrete Variable Topology Optimization Using Multi-Cut Formulation and Adaptive Trust Regions](https://arxiv.org/abs/2406.12215)
+
+# Gallery
 
 ## 2D Cantilever
 
