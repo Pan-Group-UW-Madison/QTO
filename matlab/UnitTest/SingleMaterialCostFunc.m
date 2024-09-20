@@ -56,12 +56,12 @@ if strcmp(params.objective, 'minimum compliance')
     params.U(params.freedofs) = K(params.freedofs, params.freedofs) \ params.F(params.freedofs);
 else
     sK = reshape(StiffnessMat.KE(:) * xPhys(:)', 64 * params.nelx * params.nely, 1);
-K = sparse(StiffnessMat.iK, StiffnessMat.jK, sK); K = (K + K') / 2;
+    K = sparse(StiffnessMat.iK, StiffnessMat.jK, sK); K = (K + K') / 2;
 
-K(params.din, params.din) = K(params.din,params.din)+params.k1;
-K(params.dout, params.dout) = K(params.dout,params.dout)+params.k2;
+    K(params.din, params.din) = K(params.din,params.din)+params.k1;
+    K(params.dout, params.dout) = K(params.dout,params.dout)+params.k2;
 
-params.U(params.freedofs, :) = K(params.freedofs, params.freedofs) \ params.F(params.freedofs, :);
+    params.U(params.freedofs, :) = K(params.freedofs, params.freedofs) \ params.F(params.freedofs, :);
 end
 
 obj = params.U' * params.F;
