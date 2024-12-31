@@ -1,4 +1,4 @@
-function sensitivity = Sensitivity(x, params, StiffnessMat)
+function sensitivity = Sensitivity(x, params, StiffnessMat, isFractional)
     if strcmp(params.objective, 'minimum compliance')
         sensitivityBase = Compliance(params, StiffnessMat);
     else
@@ -8,7 +8,7 @@ function sensitivity = Sensitivity(x, params, StiffnessMat)
     if params.dim == 2
         xPhys = zeros(params.nely, params.nelx);
         for i = 1:params.NumMaterial
-            xPhys = xPhys + params.E(i) * x(:, :, i);
+            xPhys = xPhys + (params.E(i) - params.Emin) * x(:, :, i);
         end
         xPhys = xPhys + params.Emin;
 
@@ -20,12 +20,20 @@ function sensitivity = Sensitivity(x, params, StiffnessMat)
         sensitivity = zeros(params.nely, params.nelx, params.NumMaterial);
         for i = 1:params.NumMaterial
             xRho = x(:, :, i);
-            xFilter = zeros(params.nely, params.nelx);
-            xFilter(xRho > 0) = params.E(i) - params.Emin;
-            xFilter(xRho == 0) = xPhys(xRho == 0) * (params.E(i) - params.Emin);
-            xFilter(xMask == 0) = xPhys(xMask == 0);
+            if isempty(isFractional) == false && isFractional
+                xFilter = params.E(i) - params.Emin;
+            else
+                xFilter = zeros(params.nely, params.nelx);
+                xFilter(xRho > 0) = params.E(i) - params.Emin;
+                xFilter(xRho == 0) = xPhys(xRho == 0) * (params.E(i) - params.Emin);
+                xFilter(xMask == 0) = xPhys(xMask == 0);
+            end
 
-            s = sensitivityBase .* xFilter;
+            if params.NumMaterial == 1
+                s = sensitivityBase .* xPhys;
+            else
+                s = sensitivityBase .* xFilter;
+            end
             if strcmp(params.filter, 'radius')
                 s = params.H * (s(:) ./ params.Hs);
                 sensitivity(:, :, i) = reshape(s, params.nely, params.nelx);
@@ -61,8 +69,22 @@ end
 
 function sensitivity = Mechanism(params, StiffnessMat)
     if params.dim == 2
-        U1 = params.U(:, 1);
-        U2 = params.U(:, 2);
-        sensitivity = -reshape(sum((U1(StiffnessMat.edofMat) * StiffnessMat.KE) .* U2(StiffnessMat.edofMat), 2), params.nely, params.nelx);
+        if params.useSuperResolution
+            U1 = params.superU(:, 1);
+            U2 = params.superU(:, 2);
+            superSensitivity = -reshape(sum((U1(StiffnessMat.edofMat) * StiffnessMat.KE) .* U2(StiffnessMat.edofMat), 2), params.nely * params.superResolutionRatio, params.nelx * params.superResolutionRatio);
+
+            sensitivity = zeros(params.nely, params.nelx);
+            for i = 1:params.superResolutionRatio
+                for j = 1:params.superResolutionRatio
+                    sensitivity = sensitivity + superSensitivity(i:params.superResolutionRatio:end, j:params.superResolutionRatio:end);
+                end
+            end
+            sensitivity = sensitivity / params.superResolutionRatio / params.superResolutionRatio;
+        else
+            U1 = params.U(:, 1);
+            U2 = params.U(:, 2);
+            sensitivity = -reshape(sum((U1(StiffnessMat.edofMat) * StiffnessMat.KE) .* U2(StiffnessMat.edofMat), 2), params.nely, params.nelx);
+        end
     end
 end

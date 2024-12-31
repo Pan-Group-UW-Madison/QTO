@@ -13,6 +13,18 @@ function result = MultiCutsSub(x, obj, weight, d, params)
         return;
     end
 
+    if strcmp(params.MilpSolver, 'lagrangian')
+        result = MultiCutsSubLagrangian(x, obj, weight, d, params);
+
+        return;
+    end
+
+    if strcmp(params.MilpSolver, 'dantzig-wolfe')
+        result = MultiCutsSubDantzigWolfe(x, obj, weight, d, params);
+
+        return;
+    end
+
     n = size(x, 2);
     if n > 1
         l = floor(size(x, 1) / params.NumMaterial);
@@ -60,7 +72,6 @@ function result = MultiCutsSub(x, obj, weight, d, params)
             for jj = 1:params.NumMaterial
                 moveLimit = moveLimit + x((jj-1)*l+1:jj*l, ii);
             end
-            compressedX0 = moveLimit;
             moveLimit = 1 - 2 * moveLimit;
             moveLimit = moveLimit';
 
@@ -68,11 +79,13 @@ function result = MultiCutsSub(x, obj, weight, d, params)
             col(numSensitivity*numVar+(ii-1)*numDesignVar+1:numSensitivity*numVar+ii*numDesignVar) = 1:numDesignVar;
 
             offset = numSensitivity*numVar + (ii-1)*numDesignVar;
+            rhs(numSensitivity+ii) = d(ii) * l;
             for jj = 1:params.NumMaterial
                 val(offset+(jj-1)*l+1:offset+jj*l) = moveLimit;
+                rhs(numSensitivity+ii) = rhs(numSensitivity+ii) + moveLimit * x((jj-1)*l+1:jj*l, ii);
             end
 
-            rhs(numSensitivity+ii) = d(ii) * l - sum(compressedX0.^2);
+            rhs(numSensitivity+ii) = floor(rhs(numSensitivity+ii)/2)*2;
         end
 
         % volume/mass constraint
@@ -119,18 +132,15 @@ function result = MultiCutsSub(x, obj, weight, d, params)
         gurobiParams.Heuristics = params.PreStage;
         gurobiParams.TimeLimit = 300;
 
-        while true
-            gurobiResult = gurobi(model, gurobiParams);
+        gurobiResult = gurobi(model, gurobiParams);
 
-            if strcmp(gurobiResult.status, 'OPTIMAL')
-                break;
-            else
-                model.rhs(numSensitivity+1:numSensitivity+numTrustRegion) = model.rhs(numSensitivity+1:numSensitivity+numTrustRegion) + 0.02 * l;
-            end
+        if strcmp(gurobiResult.status, 'OPTIMAL')
+            result.x = gurobiResult.x(1:numDesignVar);
+            result.obj = gurobiResult.x(etaOffset);
+        else
+            result.x = zeros(numDesignVar, 1);
+            result.obj = inf;
         end
-
-        result.x = gurobiResult.x(1:numDesignVar);
-        result.obj = gurobiResult.x(etaOffset);
     else
         l = floor(size(x, 1) / params.NumMaterial);
         numVar = l * params.NumMaterial;
@@ -140,18 +150,15 @@ function result = MultiCutsSub(x, obj, weight, d, params)
         for ii = 1:params.NumMaterial
             moveLimit = moveLimit + x((ii-1)*l+1:ii*l, 1);
         end
-        compressedX0 = moveLimit;
         moveLimit = 1 - 2 * moveLimit;
         moveLimit = moveLimit';
 
-        d0 = d(1) * l - sum(compressedX0.^2);
+        d0 = d(1) * l;
 
         if params.NumMaterial == 1
             nnz = 2*params.NumMaterial*l;
-            rhs = [params.mass; d0];
         else
             nnz = 3*params.NumMaterial*l;
-            rhs = [params.mass; d0; ones(l, 1)];
         end
 
         row = zeros(nnz, 1);
@@ -170,7 +177,9 @@ function result = MultiCutsSub(x, obj, weight, d, params)
         col(params.NumMaterial*l+1:2*params.NumMaterial*l) = 1:numVar;
         for ii = 1:params.NumMaterial
             val(params.NumMaterial*l+(ii-1)*l+1:params.NumMaterial*l+ii*l) = moveLimit;
+            d0 = d0 + moveLimit * x((ii-1)*l+1:ii*l, 1);
         end
+        d0 = floor(d0/2)*2;
 
         % material usage
         if params.NumMaterial > 1
@@ -180,6 +189,12 @@ function result = MultiCutsSub(x, obj, weight, d, params)
                 col(offset+jj:params.NumMaterial:offset+params.NumMaterial*l) = (jj-1)*l+(1:l);
                 val(offset+jj:params.NumMaterial:offset+params.NumMaterial*l) = 1;
             end
+        end
+
+        if params.NumMaterial == 1
+            rhs = [params.mass; d0];
+        else
+            rhs = [params.mass; d0; ones(l, 1)];
         end
 
         model.A = sparse(row, col, val);
@@ -202,17 +217,14 @@ function result = MultiCutsSub(x, obj, weight, d, params)
         gurobiParams.Heuristics = params.PreStage;
         gurobiParams.TimeLimit = 300;
 
-        while true
-            gurobiResult = gurobi(model, gurobiParams);
+        gurobiResult = gurobi(model, gurobiParams);
 
-            if strcmp(gurobiResult.status, 'OPTIMAL')
-                break;
-            else
-                model.rhs(2) = model.rhs(2) + 0.02 * l;
-            end
+        if strcmp(gurobiResult.status, 'OPTIMAL')
+            result.x = gurobiResult.x;
+            result.obj = obj(1) - weight' * (result.x - x);
+        else
+            result.x = zeros(numVar, 1);
+            result.obj = inf;
         end
-
-        result.x = gurobiResult.x;
-        result.obj = obj(1) - weight' * (result.x - x);
     end
 end

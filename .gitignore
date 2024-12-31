@@ -2,3 +2,9 @@ Result/
 Step/
 
 python-script/
+
+result/
+
+*.mat
+
+__pycache__/

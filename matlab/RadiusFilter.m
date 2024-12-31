@@ -13,9 +13,21 @@ function [H, Hs] = RadiusFilter(params)
                     k = k + 1;
                     iH(k) = e1;
                     jH(k) = e2;
-                    sH(k) = max(0, params.rmin - sqrt((i1 - i2)^2 + (j1 - j2)^2));
+                    % sH(k) = max(0, params.rmin - sqrt((i1 - i2)^2 + (j1 - j2)^2));
 
-                    if strcmp(params.BC, 'cantilever') == false
+                    if sqrt((i1 - i2)^2 + (j1 - j2)^2) < params.rmin
+                        sH(k) = 1;
+                    else
+                        sH(k) = 0;
+                    end
+
+                    if strcmp(params.BC, 'inverter')
+                        if j1 < params.rmin && j2 >= 2 * j1
+                            sH(k) = sH(k) * 2;
+                        end
+                    end
+
+                    if strcmp(params.BC, 'cantilever') == false && strcmp(params.BC, 'inverter') == false
                         if i1 < params.rmin && i2 >= 2 * i1
                             sH(k) = sH(k) * 2;
                         end

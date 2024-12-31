@@ -12,18 +12,24 @@ function params = BCs(params)
             params.fixeddofs = union(1:2:2 * (params.nely + 1), 2 * (params.nelx + 1) * (params.nely + 1));
             params.F = sparse(2 * (params.nely + 1), 1, -0.5, 2 * (params.nely + 1) * (params.nelx + 1), 1);
             params.U = zeros(2 * (params.nelx + 1) * (params.nely + 1), 1);
-        elseif strcmp(params.BC, 'two_point_brige')
+        elseif strcmp(params.BC, 'two_point_bridge')
             params.fixeddofs = union(1:2:2 * (params.nely + 1), 2 * (params.nelx + 1) * (params.nely + 1));
             params.F = sparse([2 * (params.nely + 1); 2 * (params.nely + 1) * (params.nelx / 2)], [1; 1], [-1; -1], 2 * (params.nely + 1) * (params.nelx + 1), 1);
             params.U = zeros(2 * (params.nelx + 1) * (params.nely + 1), 1);
         elseif strcmp(params.BC, 'inverter')
-            params.fixeddofs = union(2:2*(params.nely+1):2*(params.nelx+1)*(params.nely+1),2*(params.nely+1):-1:2*(params.nely+1)-1);
+            params.fixeddofs = union(2:2*(params.nely+1):2*(params.nelx+1)*(params.nely+1),2*(params.nely+1):-1:2*(params.nely+1)-(2*floor(params.nelx/100)-1));
             params.F = zeros(2*(params.nely+1)*(params.nelx+1), 2);
             params.din = 1;
             params.dout = 2*params.nelx*(params.nely+1)+1;
             params.F(params.din, 1) = 1;
             params.F(params.dout, 2) = -1;
             params.U = zeros(2 * (params.nelx + 1) * (params.nely + 1), 2);
+        end
+    else
+        if strcmp(params.BC, 'cantilever')
+            params.fixeddofs = 1:3 * (params.nely + 1) * (params.nelz + 1);
+            params.F = sparse(3 * (params.nelx + 1) * (params.nely + 1) * (params.nelz + 1) - 3 * floor(params.nely / 2), 1, -1, 3 * (params.nelx + 1) * (params.nely + 1) * (params.nelz + 1), 1);
+            params.U = zeros(3 * (params.nelx + 1) * (params.nely + 1) * (params.nelz + 1), 1);
         end
     end
 end

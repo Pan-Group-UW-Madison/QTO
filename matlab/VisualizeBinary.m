@@ -1,4 +1,4 @@
-function Visualize(y, params, filename)
+function VisualizeBinary(y, params, filename)
     if params.NumMaterial == 1
         x = y;
         x = reshape(x, params.nely, params.nelx);
@@ -18,8 +18,9 @@ function Visualize(y, params, filename)
     set(gcf, 'position', [100, 200, 256, 256*size(x, 1)/size(x, 2)]);
     set(gca, 'Position', [0, 0, 1, 1])
     if params.NumMaterial > 1
-        myColorMap = jet(256);
-        myColorMap(end,:) = 1;
+        myColorMap = [1, 0, 0; 0, 0, 1; 1, 1, 1];
+        % myColorMap = jet(256);
+        % myColorMap(end,:) = 1;
         colormap(myColorMap);
         imagesc(1 - x);
         clim([0 1]);
