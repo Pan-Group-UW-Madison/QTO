@@ -1,7 +1,7 @@
 import numpy as np
 import ufl
 from dolfinx.mesh import locate_entities_boundary, meshtags
-from dolfinx.fem import VectorFunctionSpace, FunctionSpace, Function, Constant, dirichletbc, locate_dofs_topological
+from dolfinx.fem import FunctionSpace, Function, Constant, dirichletbc, locate_dofs_topological, functionspace
 
 from petsc4py import PETSc
 import dolfinx.io
@@ -94,16 +94,24 @@ class LinearElasticity(Problem):
         
         if descriptor["problem_name"] is None:
             self.problem_name = "linear_elasticity"
-            
-        self.V = VectorFunctionSpace(self.mesh, ("CG", 1))
-        self.S0 = FunctionSpace(self.mesh, ("DG", 0))
+        
+        self.dim = self.mesh.topology.dim            
+        self.V = functionspace(self.mesh, ("CG", 1, (self.dim,)))
+        self.S0 = functionspace(self.mesh, ("DG", 0))
         self.u, self.v = ufl.TrialFunction(self.V), ufl.TestFunction(self.V)
         self.u_field = Function(self.V)
+        self.u_field.name = "displacement"
         self.rho_field = Function(self.S0)
+        self.rho_field.name = "density"
+        self.rank = Function(self.S0)
+        self.rank.x.petsc_vec.set(self.comm.rank)
+        self.rank.name = "rank"
+        self.sensitivity = Function(self.S0)
+        self.sensitivity.name = "sensitivity"
         
-        # if descriptor["interpolation"] == "continuous":
-        self.S = FunctionSpace(self.mesh, ("CG", 1))
-        self.rho_phys_field = Function(self.S)
+        if descriptor["interpolation"] == "continuous":
+            self.S = functionspace(self.mesh, ("CG", 1))
+            self.rho_phys_field = Function(self.S)
         
         if isinstance(descriptor["young's modulus"], (int, float)):
             self.E_list = np.array([descriptor["young's modulus"]], dtype=np.float64)
@@ -128,26 +136,26 @@ class LinearElasticity(Problem):
         self.nu = descriptor["poisson's ratio"]
         
         E0 = self.E_list[-1]
-        nu = self.nu
+        ν = self.nu
         
         if descriptor["interpolation"] == "discrete":
             self.interpolation = "discrete"
             self.eps = 1e-2
-            E = (self.eps + (1-self.eps)*self.rho_phys_field) * E0
+            E = (self.eps + (1-self.eps)*self.rho_field) * E0
         else:
             self.interpolation = "continuous"
             p, eps = 3, 1e-6
             E = (eps + (1-eps)*self.rho_phys_field**p) * E0
-        _lambda, mu = E*nu/(1+nu)/(1-2*nu), E/(2*(1+nu))
+        μ = E / (2.0 * (1.0 + ν))
+        λ = E * ν / ((1.0 + ν) * (1.0 - 2.0 * ν))
         
         # Kinematics
         def epsilon(u):
             return ufl.sym(ufl.grad(u))
 
-        def sigma(u):  # 3D or plane strain
-            return 2*mu*epsilon(u) + _lambda*ufl.tr(epsilon(u))*ufl.Identity(len(u))
+        def sigma(v):
+            return 2.0 * μ * ufl.sym(ufl.grad(v)) + λ * ufl.tr(ufl.sym(ufl.grad(v))) * ufl.Identity(len(v))
         
-        self.dim = self.mesh.topology.dim
         self.disp_facets = locate_entities_boundary(self.mesh, self.dim-1, descriptor["disp_bc"])
         self.bcs = [dirichletbc(Constant(self.mesh, np.full(self.dim, 0.0)), locate_dofs_topological(self.V, self.dim-1, self.disp_facets), self.V)]
         
@@ -198,25 +206,38 @@ class LinearElasticity(Problem):
         
     def summary(self):
         if self.comm.rank == 0:
-            print(bcolors.WARNING + "Problem name: ", self.problem_name + bcolors.ENDC)
-            print("  Number of ranks: " + bcolors.OKBLUE, self.comm.size, bcolors.ENDC)
+            # print(bcolors.WARNING + "Problem name: ", self.problem_name + bcolors.ENDC)
+            # print("  Number of ranks: " + bcolors.OKBLUE, self.comm.size, bcolors.ENDC)
+            # if self.mesh.topology.dim == 2:
+            #     print("  Number of cells: " + bcolors.OKBLUE, self.mesh.topology.index_map(2).size_global, bcolors.ENDC)
+            #     print("  Number of vertices: " + bcolors.OKBLUE, self.mesh.topology.index_map(0).size_global, bcolors.ENDC)
+            #     print("  Number of dofs: " + bcolors.OKBLUE, 2*self.V.dofmap.index_map.size_global, bcolors.ENDC)
+            # elif self.mesh.topology.dim == 3:
+            #     print("  Number of cells: " + bcolors.OKBLUE, self.mesh.topology.index_map(3).size_global, bcolors.ENDC)
+            #     print("  Number of vertices: " + bcolors.OKBLUE, self.mesh.topology.index_map(0).size_global, bcolors.ENDC)
+            #     print("  Number of dofs: " + bcolors.OKBLUE, 3*self.V.dofmap.index_map.size_global, bcolors.ENDC)
+            # print("  Number of materials: " + bcolors.OKBLUE, np.size(self.E_list, 0), bcolors.ENDC, flush=True)
+            
+            print("Problem name: ", self.problem_name)
+            print("  Number of ranks: ", self.comm.size)
             if self.mesh.topology.dim == 2:
-                print("  Number of cells: " + bcolors.OKBLUE, self.mesh.topology.index_map(2).size_global, bcolors.ENDC)
-                print("  Number of vertices: " + bcolors.OKBLUE, self.mesh.topology.index_map(0).size_global, bcolors.ENDC)
-                print("  Number of dofs: " + bcolors.OKBLUE, 2*self.V.dofmap.index_map.size_global, bcolors.ENDC)
+                print("  Number of cells: ", self.mesh.topology.index_map(2).size_global)
+                print("  Number of vertices: ", self.mesh.topology.index_map(0).size_global)
+                print("  Number of dofs: ", 2*self.V.dofmap.index_map.size_global)
             elif self.mesh.topology.dim == 3:
-                print("  Number of cells: " + bcolors.OKBLUE, self.mesh.topology.index_map(3).size_global, bcolors.ENDC)
-                print("  Number of vertices: " + bcolors.OKBLUE, self.mesh.topology.index_map(0).size_global, bcolors.ENDC)
-                print("  Number of dofs: " + bcolors.OKBLUE, 3*self.V.dofmap.index_map.size_global, bcolors.ENDC)
-            print("  Number of materials: " + bcolors.OKBLUE, np.size(self.E_list, 0), bcolors.ENDC, flush=True)
+                print("  Number of cells: ", self.mesh.topology.index_map(3).size_global)
+                print("  Number of vertices: ", self.mesh.topology.index_map(0).size_global)
+                print("  Number of dofs: ", 3*self.V.dofmap.index_map.size_global)
+            print("  Number of materials: ", np.size(self.E_list, 0), flush=True)
     
     def save_results(self):
-        xdmf = dolfinx.io.XDMFFile(self.mesh.comm, self.prefix+self.problem_name+".xdmf", "w")
-        xdmf.write_mesh(self.mesh)
-        if self.interpolation == "discrete":
-            self.rho_field.name = "density"
-            xdmf.write_function(self.rho_field)
-        else:
-            self.rho_phys_field.name = "density"
-            xdmf.write_function(self.rho_phys_field)
-        xdmf.close()
+        with dolfinx.io.XDMFFile(self.mesh.comm, self.prefix+self.problem_name+".xdmf", "w") as xdmf:
+            xdmf.write_mesh(self.mesh)
+            if self.interpolation == "discrete":
+                xdmf.write_function(self.u_field)
+                xdmf.write_function(self.rho_field)
+                xdmf.write_function(self.sensitivity)
+                xdmf.write_function(self.rank)
+            else:
+                self.rho_phys_field.name = "density"
+                xdmf.write_function(self.rho_phys_field)
