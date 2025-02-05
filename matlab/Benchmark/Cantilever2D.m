@@ -124,4 +124,4 @@ end
 % if strcmp(params.MilpSolver, 'dantzig-wolfe') && ~isempty(params.useQuantum) && params.useQuantum
 %     params.MilpSolver = 'dantzig-wolfe-quantum';
 % end
-% VisualizeBinary(x, params, ['Result/' num2str(params.nelx) 'x' num2str(params.nely) '_' params.MilpSolver '_' params.BC '_' num2str(params.NumMaterial) '.png']);
+Visualize(x, params, ['Result/' num2str(params.nelx) 'x' num2str(params.nely) '_' params.MilpSolver '_' params.BC '_' num2str(params.NumMaterial) '.png']);
