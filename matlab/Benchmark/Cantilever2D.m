@@ -4,6 +4,7 @@ system("clear");
 
 addpath(genpath('../'));
 
+%%% Parameters
 params.dim = 2;
 
 params.nelx = 200;
@@ -18,9 +19,6 @@ params.epsilon = 5e-3;
 
 params.MilpSolver = 'milp';
 % params.MilpSolver = 'lp';
-% params.MilpSolver = 'multilevel-lp';
-% params.MilpSolver = 'lagrangian';
-% params.MilpSolver = 'dantzig-wolfe';
 params.PreStage = 1;
 
 params.singleCut = false;
@@ -36,28 +34,30 @@ params.objective = 'minimum compliance';
 params.filter = 'radius';
 % params.filter = 'pde';
 
-params.NumMaterial = 2;
-
 params.nu = 0.3;
-if params.NumMaterial == 1
-    params.E = 1.0;
-    params.density = 1.0;
-elseif params.NumMaterial == 4
-    params.E = [0.43, 0.7, 0.94, 1.0];
-    params.density = [0.3, 0.5, 0.8, 1.0];
-else
-    % params.E = [0.43, 0.7, 0.85, 0.94, 1.0];
-    % params.density = [0.3, 0.5, 0.65, 0.8, 1.0];
-    % params.E = [0.43, 0.85, 1.0, 0.94, 0.7];
-    % params.density = [0.3, 0.65, 1.0, 0.8, 0.5];
-    % params.E = [0.4, 0.7, 0.85, 0.9, 1.0];
-    % params.density = [0.3, 0.5, 0.65, 0.8, 1.0];
-    % params.E = [0.4, 0.85, 1.0, 0.9, 0.7];
-    % params.density = [0.3, 0.65, 1.0, 0.8, 0.5];
 
-    params.E = [0.6, 1.0];
-    params.density = [0.4, 1.0];
-end
+% params.E = 1.0;
+% params.density = 1.0;
+
+% params.E = [0.43, 0.7, 0.94, 1.0];
+% params.density = [0.3, 0.5, 0.8, 1.0];
+
+% params.E = [0.43, 0.7, 0.85, 0.94, 1.0];
+% params.density = [0.3, 0.5, 0.65, 0.8, 1.0];
+
+% params.E = [0.43, 0.85, 1.0, 0.94, 0.7];
+% params.density = [0.3, 0.65, 1.0, 0.8, 0.5];
+
+% params.E = [0.4, 0.7, 0.85, 0.9, 1.0];
+% params.density = [0.3, 0.5, 0.65, 0.8, 1.0];
+
+% params.E = [0.4, 0.85, 1.0, 0.9, 0.7];
+% params.density = [0.3, 0.65, 1.0, 0.8, 0.5];
+
+params.E = [0.6, 1.0];
+params.density = [0.4, 1.0];
+
+params.NumMaterial = length(params.E);
 
 if strcmp(params.BC, 'inverter')
     params.xSymmetric = false;
@@ -80,8 +80,10 @@ params.maxFem = 100;
 
 params.d0 = 0.3;
 params.verbose = true;
-params.visualizeStep = true;
+params.visualizeStep = false;
 params.visualizeLevel = false;
+
+%%%
 
 result = MultiCutsTopOpt(params);
 
@@ -110,15 +112,16 @@ for i = 1:params.NumMaterial
 end
 
 % visualize result
-% xTemp = result.x;
-% x = zeros(params.nely, params.nelx, params.NumMaterial);
-% reorder = [1, 3, 5, 4, 2];
-% for i = 1:params.NumMaterial
-%     x(:, :, reorder(i)) = xTemp(:, :, i);
-% end
-
-x = result.x;
-if strcmp(params.MilpSolver, 'dantzig-wolfe') && ~isempty(params.useQuantum) && params.useQuantum
-    params.MilpSolver = 'dantzig-wolfe-quantum';
+xTemp = result.x;
+x = zeros(params.nely, params.nelx, params.NumMaterial);
+reorder = [1, 3, 5, 4, 2];
+for i = 1:params.NumMaterial
+    x(:, :, reorder(i)) = xTemp(:, :, i);
 end
-VisualizeBinary(x, params, ['Result/' num2str(params.nelx) 'x' num2str(params.nely) '_' params.MilpSolver '_' params.BC '_' num2str(params.NumMaterial) '.png']);
+
+% visualize binary result
+% x = result.x;
+% if strcmp(params.MilpSolver, 'dantzig-wolfe') && ~isempty(params.useQuantum) && params.useQuantum
+%     params.MilpSolver = 'dantzig-wolfe-quantum';
+% end
+% VisualizeBinary(x, params, ['Result/' num2str(params.nelx) 'x' num2str(params.nely) '_' params.MilpSolver '_' params.BC '_' num2str(params.NumMaterial) '.png']);
