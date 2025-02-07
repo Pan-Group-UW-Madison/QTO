@@ -1,5 +1,5 @@
 ---
-title: 'TopMultiCuts: A Topology Optimization Solver via Multi-cuts Formulation'
+title: 'DVTopMultiCuts: A Fast Discrete Variable Topology Optimization Solver via a Multi-cuts Approach'
 tags:
   - Topology Optimization
   - Mixed-integer nonlinear optimization
@@ -22,7 +22,7 @@ bibliography: paper.bib
 
 # Summary
 
-Topology optimization (TO) [@bendsoe2013topology], a typical partial differential equation (PDE) constrained problem, can consider multiple candidate materials simultaneously to seek an optimal layouts for the candidates within a given design space. `TopMultiCuts` provides a MATLAB interface to perform TO in an arbitrary rectangular 2D design space in linear elasticity and working with multiple candidate materials by deploying the multi-cuts formulation introduced in [@ye2024discrete]. This library supports both convex objectives, e.g. minimum compliance problem in \autoref{fig:topo_mc}; and non-convex objectives, e.g. compliant mechanism design in \autoref{fig:topo_cm}.
+Topology optimization (TO) solves a partial differential equation (PDE)-constrained optimization problem to determine the optimal distribution of single or multiple materials for maximizing structural performance under given design space and constraints. [@bendsoe2013topology] `DVTopMultiCuts` provides a MATLAB implementation for TO with multiple materials and linear elasticity in arbitrary 2D rectangular domains, by maintaining discrete design variables and deploying a multi-cuts formulation as introduced in [@ye2024discrete]. This software supports both convex objectives, such as minimum compliance (see \autoref{fig:topo_mc}),and non-convex objectives, such as compliant mechanism design (see \autoref{fig:topo_cm}).
 
 ![Multi-material minimum compliance problem \label{fig:topo_mc}](topo_mc_matset2_480x320_color.png){ width=40% }
 
@@ -30,9 +30,9 @@ Topology optimization (TO) [@bendsoe2013topology], a typical partial differentia
 
 # Statement of need
 
-Though multiple educational [@andreassen2011efficient] or scalable [@aage2015topology] open-source implementations to solve TO problems exist, most of the available implementations heavily rely on the solid interpolation material with penalization (SIMP) method [@bendsoe1999material] and lack a user friendly interface to test with different boundary conditions or multiple candidate materials. Most of them lack a frequent maintenance and update of new test cases. It makes the benchmark between different methods hard to track. Thus, `TopMultiCuts` provides a user-friendly interface which can easily manage the addition of new boundary conditions (BCs) for benchmarking. Two types of objectives have been included in the library: the minimum compliance and compliant mechanism problem. Four BCs for the minimum compliance and one BC for the compliant mechanism problem has been installed in the library already, included in `BCs.m`. By modifying `BCs.m`, new BCs can be quickly installed.
+First, existing open-source TO codes (educational [@andreassen2011efficient] or scalable [@aage2015topology]) typically rely on the Solid Isotropic Material with Penalty (SIMP) method [@bendsoe1999material]. Next, these existing implementations often lack user-friendly interfaces to accommodate different boundary conditions (BCs) and multi-material designs, as well as regular maintenance and updated test cases, hindering benchmarking between different implementations. Unlike existing software, `DVTopMultiCuts` provides a user-friendly interface that simplifies the addition of new BCs for benchmarking purposes. In addition, two types of objectives are integrated in the software: minimum compliance and compliant mechanism. Four types of BCs for minimum compliance and one for compliant mechanisms are currently defined in BCs.m. Users can easily add new BCs by modifying this file.
 
-The multi-cuts formulation, first introduced to TO problems in truss systems [@munoz2011generalized] long ago, has lacked attention over the past decade. To evaluate the objectives in TO, it typically requires a complex and robust finite element analysis (FEA) solver and each evaluation can be very expensive in time and computation resources [@aage2015topology]. As the multi-cuts formulation generally evolves multiple stages and complex cutting strategies, it is hard to implement the multi-cuts formulation for the objectives like the ones in TO. To be best of the authors' knowledge, `TopMultiCuts` is the first open-source implementation of multi-cuts formulation targeting on TO problems, specifically focusing on continuum structures. Different from the conventional SIMP method, the multi-cuts formulation can greatly reduce the number of FEA by an order of magnitude [@ye2024discrete], which can greatly save the running time in the real applications.
+Furthermore, the multi-cuts formulation, while first introduced to TO problems in truss systems [@munoz2011generalized], has received limited attention over the past decade, due to its implementation complexity. However, as demonstrated in our recent work [@ye2024discrete], the multi-cuts formulation reduces optimization iterations and thereby PDE solver calls (e.g., finite element analysis (FEA)) by approximately an order of magnitude compared to the conventional SIMP method.  Recognizing the significant computational expense associated with each FEA evaluation [@aage2015topology], the multi-cuts formulation offers a promising avenue for enhancing the computational efficiency of TO designs in practical applications. Addressing a gap in existing software, `DVTopMultiCuts` is, to the authors' knowledge, the first open-source implementation of the multi-cuts formulation for solving TO problems, specifically focusing on continuum structure design with high-resolution meshes.
 
 # Technical details
 
@@ -51,17 +51,17 @@ The multi-cuts formulation, first introduced to TO problems in truss systems [@m
 \end{equation}
 where $\rho$ is the design variable, $\tilde{f}^j(\rho)$ is the linear approximation to the objective obtained from sensitivity analysis, $t^j(\rho)$ is the trust region constraint, $d^j$ is the radius of the trust region and $H_{i_H}$ denotes extra linear constraints included in TO. It maintains the solution history within a given optimization stage and transverse any possible combination of cuts generated in the stage.
 
-Two filters, radius filter and PDE filter [@lazarov2011filters], have been provided in the library in `RadiusFilter.m` and `PDEFilter.m`, respectively. Different materials are rendered in different colors at the visualization stage and the color map can be modified in `Visualize.m`. `Objective.m` defines the supported objectives in `TopMultiCuts`. It requires the elementary matrix generated from `ElementMat.m`. To add new physics needs to modify these two files together. The sensitivity analysis is performed in `Sensitivity.m`. One can try new sensitivity analysis strategy for discrete variable TO by modifying this file.
+Two filters, radius filter and PDE filter [@lazarov2011filters], have been provided in the software in `RadiusFilter.m` and `PDEFilter.m`, respectively. Different materials are rendered in different colors at the visualization stage and the color map can be modified in `Visualize.m`. `Objective.m` defines the supported objectives in `TopMultiCuts`. It requires the elementary matrix generated from `ElementMat.m`. To add new physics needs to modify these two files together. The sensitivity analysis is performed in `Sensitivity.m`. One can try new sensitivity analysis strategy for discrete variable TO by modifying this file.
 
 The scripts in `Benchmark` give examples on setting the parameters to initialize the optimization. Arbitrary number of candidate materials with different Young's moduli $E$ can be assigned to `params`. Different objectives and BCs can be selected by assigning `params.BC` and `params.objective` with different values. The discretization resolution of the design domain is controlled by `params.nelx` and `params.nely`. Running the scripts, the optimal material layout would be stored to `Result` once the optimization is finalized.
 
 # Outlook
 
-The multi-cuts formulation has already been utilized to derive sub-problems suitable for the acceleration via quantum computing, reported with a minimum compliance example [@ye2023quantum]. `TopMultiCuts` can be the cornerstone of extension of quantum acceleration TO solvers for even larger problems in 3D and more complex objectives such as the ones from multi-physics [@kumar2020topology] in the future.
+The multi-cuts formulation with discrete design variables has also enabled the development of sub-problems suitable for quantum computing acceleration, as demonstrated for minimum compliance TO design [@ye2023quantum]. `DVTopMultiCuts` represents a key step towards extending quantum-accelerated TO solvers to large-scale 3D problems and complex multi-physics objectives (e.g., [@kumar2020topology]) in the future. 
 
 # Installation instructions
 
-`TopMultiCuts` is a MATLAB library and requires Gurobi [@gurobi] as the external library when solving MILPs. Gurobi is a commercial software with MATLAB interface and can be accessed via [academic license](https://www.gurobi.com/academia/academic-program-and-licenses/) for free.
+`TopMultiCuts` is a MATLAB software and requires Gurobi [@gurobi] as the external library when solving MILPs. Gurobi is a commercial library with MATLAB interface and can be accessed via [academic license](https://www.gurobi.com/academia/academic-program-and-licenses/) for free.
 
 # Acknowledgements
 
