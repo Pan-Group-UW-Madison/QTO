@@ -1,6 +1,6 @@
 # Discrete Variable Topology Optimization Using Multi-Cut Formulation and Adaptive Trust Regions
 
-Reference: [Ye, Zisheng and Pan, Wenxiao, Discrete Variable Topology Optimization Using Multi-Cut Formulation and Adaptive Trust Regions](https://link.springer.com/article/10.1007/s00158-025-03961-9)
+Reference: [Ye, Zisheng and Pan, Wenxiao, "Discrete Variable Topology Optimization Using Multi-Cut Formulation and Adaptive Trust Regions"](https://link.springer.com/article/10.1007/s00158-025-03961-9)
 
 
 # Gallery
