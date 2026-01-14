@@ -19,3 +19,5 @@ Reference: [Ye, Zisheng and Pan, Wenxiao, "Discrete Variable Topology Optimizati
 
 # See Also
 [Quantum Topology Optimization via Quantum Annealing](https://github.com/Pan-Group-UW-Madison/qtop)
+
+[Towards Quantum Accelerated Large-scale Topology Optimization](https://github.com/Pan-Group-UW-Madison/QCTO-MDW)
